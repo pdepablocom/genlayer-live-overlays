@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GenLayer Live Overlays</title>
+  <link rel="icon" href="assets/gl-mark.svg">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body>
+  <aside class="panel">
+    <header class="panel-header">
+      <h1>Live Overlays</h1>
+    </header>
+
+    <form class="panel-body" id="form" autocomplete="off">
+      <section>
+        <h2>Show</h2>
+        <div class="segmented" role="radiogroup" aria-label="Show" data-bind="show">
+          <button type="button" role="radio" data-value="gentalks">GenTalks</button>
+          <button type="button" role="radio" data-value="genlayer">GenLayer</button>
+        </div>
+        <label class="field" data-when="gentalks">
+          <span>Episode</span>
+          <input name="episode" type="text" inputmode="numeric" placeholder="e.g. 14">
+          <small>Shown as “GenTalks XIV” when the logo swaps.</small>
+        </label>
+        <label class="field" data-when="genlayer">
+          <span>Stream title</span>
+          <input name="title" type="text" placeholder="e.g. AMA">
+          <small>Shown when the logo swaps.</small>
+        </label>
+      </section>
+
+      <section>
+        <h2>Layout</h2>
+        <div class="segmented" role="radiogroup" aria-label="Cameras" id="groups"></div>
+        <div class="segmented is-wrapping" role="radiogroup" aria-label="Layout" id="layouts"></div>
+      </section>
+
+      <section>
+        <h2>Look</h2>
+        <div class="segmented" role="radiogroup" aria-label="Theme" data-bind="theme">
+          <button type="button" role="radio" data-value="light">White</button>
+          <button type="button" role="radio" data-value="ink">Ink</button>
+        </div>
+        <label class="check"><input type="checkbox" name="pattern"> Line pattern</label>
+        <label class="check"><input type="checkbox" name="motion"> Move the pattern</label>
+      </section>
+
+      <section>
+        <h2>Live</h2>
+        <label class="check is-first"><input type="checkbox" name="live.on"> Show the LIVE pill</label>
+        <label class="field">
+          <span>Label</span>
+          <input name="live.label" type="text" placeholder="Live">
+        </label>
+      </section>
+
+      <section>
+        <h2>Bottom band</h2>
+        <label class="check is-first"><input type="checkbox" name="band.on"> Show the band</label>
+        <div data-when="band">
+          <label class="field">
+            <span>Ticker</span>
+            <textarea name="band.ticker" rows="4" placeholder="One line per message, up to five"></textarea>
+            <small>The lines take turns over the 15 second loop.</small>
+          </label>
+          <label class="field">
+            <span>Sponsor label</span>
+            <input name="band.sponsorLabel" type="text" placeholder="Supported by">
+          </label>
+          <div id="sponsors"></div>
+          <div class="button-row">
+            <button type="button" class="button small" id="add-sponsor">Add logo</button>
+            <input type="file" id="sponsor-file" accept="image/*,.svg" multiple hidden>
+          </div>
+          <label class="check"><input type="checkbox" name="band.black"> Make logos black</label>
+          <p class="hint">Up to five. SVG or transparent PNG works best. They take turns on the right of the band.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Name tags</h2>
+        <label class="check is-first"><input type="checkbox" name="names.on"> Show name tags</label>
+        <div data-when="names">
+          <label class="check"><input type="checkbox" name="names.stay"> Keep them on (no animation)</label>
+          <div id="names"></div>
+          <p class="hint">In camera order. Full screen shows the name, role and company; the other layouts show the name only.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Presets</h2>
+        <div class="preset-save">
+          <input type="text" id="preset-name" placeholder="Name, e.g. GenTalks XV" aria-label="Preset name">
+          <button type="button" class="button small" id="preset-save">Save</button>
+        </div>
+        <div id="presets"></div>
+      </section>
+    </form>
+
+    <footer class="panel-footer">
+      <button type="button" class="button primary" id="copy-link">Copy OBS link</button>
+      <button type="button" class="button" id="open-link">Open</button>
+      <button type="button" class="button quiet" id="reset">Reset</button>
+    </footer>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="stage-frame" id="frame">
+      <iframe id="preview" src="overlay.html?samples" title="Overlay preview" width="1920" height="1080"></iframe>
+    </div>
+
+    <div class="transport">
+      <button type="button" class="button small icon" id="play" aria-label="Pause"></button>
+      <input type="range" id="scrub" min="0" max="15000" step="10" value="0" aria-label="Loop position">
+      <span class="time" id="time">0.0 s</span>
+      <label class="check"><input type="checkbox" id="samples" checked> Sample cameras</label>
+    </div>
+
+    <div class="obs">
+      <div class="obs-head">
+        <p><strong>In OBS</strong> add a Browser source, 1920 × 1080, with the link, on top of the scene. Put your sources in these spots:</p>
+        <button type="button" class="link" id="copy-holes">Copy</button>
+      </div>
+      <ol class="holes" id="holes"></ol>
+      <p class="hint" id="link-size"></p>
+    </div>
+  </main>
+
+  <template id="sponsor-template">
+    <div class="logo-row">
+      <div class="thumb is-logo has-image"></div>
+      <div class="logo-tools">
+        <span class="logo-name"></span>
+        <div class="logo-actions">
+          <button type="button" class="link" data-action="up">Up</button>
+          <button type="button" class="link" data-action="down">Down</button>
+          <button type="button" class="link" data-action="remove">Remove</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="name-template">
+    <fieldset class="name-row">
+      <legend></legend>
+      <input type="text" data-key="name" placeholder="Name, or pick someone" aria-label="Name" list="people">
+      <div class="field-row">
+        <input type="text" data-key="role" placeholder="Role" aria-label="Role">
+        <input type="text" data-key="company" placeholder="Company" aria-label="Company">
+      </div>
+    </fieldset>
+  </template>
+
+  <datalist id="people"></datalist>
+
+  <script src="js/config.js"></script>
+  <script src="js/people.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/editor.js"></script>
+</body>
+</html>
